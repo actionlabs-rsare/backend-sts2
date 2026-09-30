@@ -1,0 +1,85 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'jacoco'
+}
+
+group = 'com.ap.sts'
+version = '0.1.0'
+
+java {
+    // Practices.md pins Java 21 (LTS). The Gradle toolchain fetches it in CI
+    // even if the local default JDK differs.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// CR-S3-01 (integrator, Wave 1): S3 owns backend/certificates/** and tests/certificates/**
+// (not the standard backend/src tree). Wire those folders into the single Spring Boot module
+// so certificate code and tests compile and run without a separate build. Replaces S3's
+// local backend/certificates/wave1-wiring.init.gradle (now removed).
+sourceSets {
+    main {
+        java.srcDir 'certificates/src/main/java'
+        resources.srcDir 'certificates/src/main/resources'
+    }
+    test {
+        java.srcDir '../tests/certificates/backend/java'
+        resources.srcDir '../tests/certificates/backend/resources'
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4' // structured JSON logs
+    // CR-S3-01 (b) / OI-12 / Gate-2 B3: server-side certificate PDF rendering (Apache-2.0).
+    // Required by com.ap.sts.certificates.pdf.CertificatePdfRenderer. S2's transaction report
+    // stays dependency-free (SimplePdf); this dependency is for the certificate face only.
+    implementation 'org.apache.pdfbox:pdfbox:3.0.8'
+    // Local dev tooling: Swagger UI / OpenAPI explorer for manually testing the REST API.
+    // Not part of the Gate-1 stack decision; added for local developer convenience only.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
+    testImplementation 'org.testcontainers:postgresql:1.20.1'
+    testRuntimeOnly 'com.h2database:h2' // fast slice tests without Docker
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// Coverage gate ≥ 90% (practices.md O3). Enforced in CI (scripts/ci.sh).
+// Not bound to `build` while the skeleton has minimal code; CI runs it explicitly.
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.90
+            }
+        }
+    }
+}

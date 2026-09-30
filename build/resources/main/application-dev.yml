@@ -1,0 +1,4 @@
+# Dev profile: enables the dev sign-in / role switcher. Never use outside dev.
+sts:
+  dev-auth:
+    enabled: true

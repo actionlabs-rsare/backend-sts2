@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: sts-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:sts}}
+    username: ${DB_USERNAME:sts}
+    password: ${DB_PASSWORD:sts}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # schema owned by Flyway, never auto-generated
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${APP_PORT:8080}
+  shutdown: graceful   # drain in-flight on SIGTERM (SECURITY-15 / container checklist)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+# Dev sign-in is enabled only when this is true; disabled outside dev (SECURITY-09/12).
+sts:
+  dev-auth:
+    enabled: ${STS_DEV_AUTH_ENABLED:false}
