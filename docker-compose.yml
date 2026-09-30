@@ -1,0 +1,26 @@
+# Local dev database only. The backend itself is run with `gradlew bootRun`
+# (see README.md), so this compose file just gives you a disposable Postgres
+# without installing PostgreSQL locally.
+#
+# Usage:
+#   docker compose up -d      start Postgres in the background
+#   docker compose down       stop it (add -v to also wipe the data volume)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sts
+      POSTGRES_USER: sts
+      POSTGRES_PASSWORD: sts
+    ports:
+      - "5432:5432"
+    volumes:
+      - sts-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sts -d sts"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sts-db-data:

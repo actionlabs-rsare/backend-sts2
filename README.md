@@ -4,14 +4,24 @@ Java 21 + Spring Boot 3, built with **Gradle** (not Node.js — `gradlew` /
 `gradlew.bat` is Gradle's wrapper script, the Java equivalent of `npm`).
 REST API + Flyway migrations + Aurora-compatible PostgreSQL.
 
+## ⚠️ You need a database. This repo does not include one.
+
+This repo is **just the API source code**. There is no database engine or
+data file anywhere in here — the app is a client that connects to a
+PostgreSQL server running somewhere else. Before you run the app, you must
+have a Postgres instance up and reachable. Pick **Option A** (Docker,
+easiest, no install) or **Option B** (native Postgres) below.
+
+If you skip this step, `gradlew bootRun` will start, try to connect, fail,
+and retry forever — it looks stuck but it's actually just retrying the DB
+connection. If that happens, check that Postgres is actually running first.
+
 ## Prerequisites
 
 - JDK 17+ to run the Gradle wrapper itself (the build then provisions **JDK 21**
   via the Gradle toolchain for compiling/running the app — see
   `application.yml.note.md`).
-- A PostgreSQL server reachable at the configured host/port (see below).
-  Either Docker (`docker-compose.yml` at the repo root) or a local PostgreSQL
-  install both work.
+- Docker Desktop (for Option A) **or** a local PostgreSQL install (Option B).
 
 ## Build
 
@@ -39,13 +49,18 @@ variables (defaults in `src/main/resources/application.yml`):
 | `DB_USERNAME` | `sts` |
 | `DB_PASSWORD` | `sts` |
 
-### Option A — Docker Compose (repo root)
+### Option A — Docker Compose (recommended, no install needed)
+
+This repo ships its own `docker-compose.yml` with just a Postgres service —
+you don't need to install PostgreSQL at all, only Docker Desktop.
 
 ```bat
-docker compose up -d db
+docker compose up -d
 ```
 
 Starts Postgres 16 on port 5432 with the `sts` db/user already created.
+Check it's healthy with `docker compose ps`. To stop it: `docker compose down`
+(add `-v` to also delete the data volume and start fresh next time).
 
 ### Option B — local PostgreSQL install, on its own port
 
@@ -91,6 +106,10 @@ gradlew.bat bootRun
 ```
 
 (Adjust `DB_PORT` to `5433` etc. if using Option B above.)
+
+Or just run `run-dev.bat` (Windows), which sets these same defaults and
+starts the app in one step — edit the `DB_PORT` line in it first if you're
+on Option B.
 
 On startup, Flyway applies all migrations automatically and the app listens
 on **http://localhost:8080** (override with `APP_PORT`).
@@ -139,5 +158,8 @@ docker build -t sts-backend .
 ```
 
 Multi-stage build (`Dockerfile`), non-root user, JDK 21 base — see
-`Dockerfile` for details. This is also how `docker-compose.yml` at the repo
-root builds the `backend` service.
+`Dockerfile` for details. This builds the **app** image; it's separate from
+`docker-compose.yml` in this repo, which only runs the **database** for local
+dev. (There used to be a combined app+db+frontend compose file when this was
+part of the monorepo — that lived at the monorepo root and isn't part of
+this repo.)
